@@ -135,9 +135,11 @@ def main():
         if position != last_position:
             if position < last_position:
                 displayKey(macropad, KNOB_CCW)
+                deadline = ticks_add(ticks_ms(), DISPLAY_KEY_MS)
                 macropad.consumer_control.send(buttons[KNOB_CCW][CONTROL])
             if position > last_position:
                 displayKey(macropad, KNOB_CW)
+                deadline = ticks_add(ticks_ms(), DISPLAY_KEY_MS)
                 macropad.consumer_control.send(buttons[KNOB_CW][CONTROL])
             last_position = position
             continue
@@ -147,6 +149,7 @@ def main():
         encoder_switch = macropad.encoder_switch_debounced.pressed
         if encoder_switch:
             displayKey(macropad, KNOB_PRESS)
+            deadline = ticks_add(ticks_ms(), DISPLAY_KEY_MS)
             macropad.consumer_control.send(buttons[KNOB_PRESS][CONTROL])
             continue
 
@@ -158,6 +161,7 @@ def main():
 
         if pressed:
             displayKey(macropad, key_number)
+            deadline = ticks_add(ticks_ms(), DISPLAY_KEY_MS)
             macropad.pixels[key_number - KNOB_COUNT] = 0x999999
             macropad.pixels.show()
             sequence = buttons[key_number][CONTROL]
