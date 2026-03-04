@@ -24,6 +24,22 @@ TEXT = 0
 CONTROL = 1
 COLOR = 2
 
+NEO_BRIGHTNESS = 1.0
+NEO_DIMNESS = 0.1
+
+
+def toggleLights(macropad, lights_on):
+    if lights_on:
+        print("turning neopixels OFF")
+        macropad.pixels.brightness = NEO_DIMNESS
+        macropad.pixels.show()
+        return False
+    else:
+        print("turning neopixels ON")
+        macropad.pixels.brightness = NEO_BRIGHTNESS
+        macropad.pixels.show()
+        return True
+
 buttons = [
     # knob
     ('Vol-',    ConsumerControlCode.VOLUME_DECREMENT),
@@ -44,9 +60,8 @@ buttons = [
     # 4th row
     ('Back',    [[0x224]], 0x000020),
     ('Fwd  ',   [[0x225]], 0x002000),
-    ('Calc',    [[0x192]], 0x101010)
+    ('LEDs',    [toggleLights], 0x101010)
 ]
-
 
 def displayMap(macropad):
     group = displayio.Group()
@@ -120,6 +135,8 @@ def main():
 
     displayMap(macropad)
 
+    lights_on = toggleLights(macropad, False)
+
     last_position = 0
     start_time = 0
     print('Ready...')
@@ -166,12 +183,14 @@ def main():
             macropad.pixels.show()
             sequence = buttons[key_number][CONTROL]
             for item in sequence:
-                if isinstance(item, int):
+                if callable(item):
+                    lights_on = item(macropad, lights_on)
+                elif isinstance(item, int):
                     if item >= 0:
                         macropad.keyboard.press(item)
                     else:
                         macropad.keyboard.release(-item)
-                if isinstance(item, str):
+                elif isinstance(item, str):
                     macropad.keyboard_layout.write(item)
                 elif isinstance(item, list):
                     for code in item:
@@ -180,6 +199,7 @@ def main():
                             macropad.consumer_control.press(code)
                         if isinstance(code, float):
                             time.sleep(code)
+
         else:
             # Release any still-pressed keys, consumer codes, mouse buttons
             # Keys and mouse buttons are individually released this way (rather
