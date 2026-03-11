@@ -1,12 +1,14 @@
 import time
-import fontio
+import board
 import displayio
 import terminalio
+from adafruit_debouncer import Debouncer
 from adafruit_display_shapes.rect import Rect
 from adafruit_display_text import label
 from adafruit_macropad import MacroPad, Keycode, ConsumerControlCode
 from adafruit_ticks import ticks_ms, ticks_add, ticks_less
-
+from adafruit_neokey.neokey1x4 import NeoKey1x4
+from circuitpython_functools import partial
 
 BLACK=0x000000
 WHITE=0xFFFFFF
@@ -27,6 +29,10 @@ COLOR = 2
 NEO_BRIGHTNESS = 1.0
 NEO_DIMNESS = 0.1
 
+NEOKEY_ADDRESS = 0x30
+
+neokey: NeoKey1x4
+neokey_present = False
 
 
 def toggle_lights(macropad, lights_on):
@@ -61,6 +67,13 @@ buttons = [
     # 4th row
     ('Back',    [[0x224]], 0x000020),
     ('Fwd  ',   [[0x225]], 0x002000),
+    ('LEDs', [toggle_lights], 0x101010)
+]
+
+neokey_buttons = [
+    ('Vol-', ConsumerControlCode.VOLUME_DECREMENT),
+    ('Mute ', ConsumerControlCode.MUTE),
+    ('Vol+', ConsumerControlCode.VOLUME_INCREMENT),
     ('LEDs', [toggle_lights], 0x101010)
 ]
 
@@ -121,9 +134,22 @@ def display_key(macropad, key):
     macropad.display.refresh()
     macropad.red_led = True
 
+def get_neokey(neokey, key):
+    return neokey.get_keys()[key]
 
 def main():
+    global neokey
+    global neokey_present
     print('Starting...')
+
+    i2c_bus = board.I2C()
+    try:
+        neokey = NeoKey1x4(i2c_bus, addr=NEOKEY_ADDRESS)
+        print(f"NeoKey found at {NEOKEY_ADDRESS:#x}")
+        neokey_present = True
+    except ValueError as e:
+        print(f"NeoKey NOT found at {NEOKEY_ADDRESS:#x}")
+        neokey_present = False
 
     macropad = MacroPad()
     macropad.display.auto_refresh = False
@@ -143,10 +169,26 @@ def main():
     print('Ready...')
     deadline = ticks_add(ticks_ms(), DISPLAY_KEY_MS)
 
+    neokeys = [
+        Debouncer(partial(get_neokey, neokey, 0)),
+        Debouncer(partial(get_neokey, neokey, 1)),
+        Debouncer(partial(get_neokey, neokey, 2)),
+        Debouncer(partial(get_neokey, neokey, 3)),
+    ]
+
     while True:
         if not ticks_less(ticks_ms(), deadline):
             display_map(macropad)
             deadline = ticks_add(ticks_ms(), DISPLAY_KEY_MS)
+
+        for key in neokeys:
+            key.update()
+
+        for i in range(len(neokeys)):
+            if neokeys[i].fell:
+                print(f"neokey {i} pressed")
+            if neokeys[i].rose:
+                print(f"neokey {i} released")
 
         # knob rotation
         position = macropad.encoder
@@ -200,6 +242,7 @@ def main():
                             macropad.consumer_control.press(code)
                         if isinstance(code, float):
                             time.sleep(code)
+
 
         else:
             # Release any still-pressed keys, consumer codes, mouse buttons
