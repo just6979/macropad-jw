@@ -28,14 +28,15 @@ NEO_BRIGHTNESS = 1.0
 NEO_DIMNESS = 0.1
 
 
-def toggleLights(macropad, lights_on):
+
+def toggle_lights(macropad, lights_on):
     if lights_on:
-        print("turning neopixels OFF")
+        print("Turning NeoPixels OFF")
         macropad.pixels.brightness = NEO_DIMNESS
         macropad.pixels.show()
         return False
     else:
-        print("turning neopixels ON")
+        print("Turning NeoPixels ON")
         macropad.pixels.brightness = NEO_BRIGHTNESS
         macropad.pixels.show()
         return True
@@ -60,10 +61,10 @@ buttons = [
     # 4th row
     ('Back',    [[0x224]], 0x000020),
     ('Fwd  ',   [[0x225]], 0x002000),
-    ('LEDs',    [toggleLights], 0x101010)
+    ('LEDs', [toggle_lights], 0x101010)
 ]
 
-def displayMap(macropad):
+def display_map(macropad):
     group = displayio.Group()
 
     # top row, knob controls, white background
@@ -97,7 +98,7 @@ def displayMap(macropad):
     macropad.red_led = False
 
 
-def displayKey(macropad, key):
+def display_key(macropad, key):
     group = displayio.Group()
     group.append(Rect(0, 0, macropad.display.width, macropad.display.height, fill=BLACK))
 
@@ -133,9 +134,9 @@ def main():
     macropad.mouse.release_all()
     macropad.stop_tone()
 
-    displayMap(macropad)
+    display_map(macropad)
 
-    lights_on = toggleLights(macropad, False)
+    lights_on = toggle_lights(macropad, False)
 
     last_position = 0
     start_time = 0
@@ -144,18 +145,18 @@ def main():
 
     while True:
         if not ticks_less(ticks_ms(), deadline):
-            displayMap(macropad)
+            display_map(macropad)
             deadline = ticks_add(ticks_ms(), DISPLAY_KEY_MS)
 
         # knob rotation
         position = macropad.encoder
         if position != last_position:
             if position < last_position:
-                displayKey(macropad, KNOB_CCW)
+                display_key(macropad, KNOB_CCW)
                 deadline = ticks_add(ticks_ms(), DISPLAY_KEY_MS)
                 macropad.consumer_control.send(buttons[KNOB_CCW][CONTROL])
             if position > last_position:
-                displayKey(macropad, KNOB_CW)
+                display_key(macropad, KNOB_CW)
                 deadline = ticks_add(ticks_ms(), DISPLAY_KEY_MS)
                 macropad.consumer_control.send(buttons[KNOB_CW][CONTROL])
             last_position = position
@@ -165,7 +166,7 @@ def main():
         macropad.encoder_switch_debounced.update()
         encoder_switch = macropad.encoder_switch_debounced.pressed
         if encoder_switch:
-            displayKey(macropad, KNOB_PRESS)
+            display_key(macropad, KNOB_PRESS)
             deadline = ticks_add(ticks_ms(), DISPLAY_KEY_MS)
             macropad.consumer_control.send(buttons[KNOB_PRESS][CONTROL])
             continue
@@ -177,7 +178,7 @@ def main():
         pressed = event.pressed
 
         if pressed:
-            displayKey(macropad, key_number)
+            display_key(macropad, key_number)
             deadline = ticks_add(ticks_ms(), DISPLAY_KEY_MS)
             macropad.pixels[key_number - KNOB_COUNT] = 0x999999
             macropad.pixels.show()
