@@ -35,16 +35,20 @@ neokey: NeoKey1x4
 neokey_present = False
 
 
-def toggle_lights(macropad, lights_on):
+def toggle_lights(macropad, neokey, lights_on):
     if lights_on:
         print("Turning NeoPixels OFF")
         macropad.pixels.brightness = NEO_DIMNESS
         macropad.pixels.show()
+        neokey.pixels.brightness = NEO_DIMNESS
+        neokey.pixels.show()
         return False
     else:
         print("Turning NeoPixels ON")
         macropad.pixels.brightness = NEO_BRIGHTNESS
         macropad.pixels.show()
+        neokey.pixels.brightness = NEO_BRIGHTNESS
+        neokey.pixels.show()
         return True
 
 buttons = [
@@ -71,10 +75,10 @@ buttons = [
 ]
 
 neokey_buttons = [
-    ('Vol-', ConsumerControlCode.VOLUME_DECREMENT),
-    ('Mute ', ConsumerControlCode.MUTE),
-    ('Vol+', ConsumerControlCode.VOLUME_INCREMENT),
-    ('LEDs', [toggle_lights], 0x101010)
+    ('Vol-', ConsumerControlCode.VOLUME_DECREMENT, 0x330000),
+    ('Mute ', ConsumerControlCode.MUTE, 0x003300),
+    ('Vol+', ConsumerControlCode.VOLUME_INCREMENT, 0x000033),
+    ('LEDs', [toggle_lights], 0x333333)
 ]
 
 def display_map(macropad):
@@ -162,12 +166,11 @@ def main():
 
     display_map(macropad)
 
-    lights_on = toggle_lights(macropad, False)
+    for i in range(len(neokey_buttons)):
+        neokey.pixels[i] = neokey_buttons[i][2]
 
-    last_position = 0
-    start_time = 0
-    print('Ready...')
-    deadline = ticks_add(ticks_ms(), DISPLAY_KEY_MS)
+    lights_on = toggle_lights(macropad, neokey, False)
+
 
     neokeys = [
         Debouncer(partial(get_neokey, neokey, 0)),
@@ -175,6 +178,11 @@ def main():
         Debouncer(partial(get_neokey, neokey, 2)),
         Debouncer(partial(get_neokey, neokey, 3)),
     ]
+
+    last_position = 0
+    start_time = 0
+    print('Ready...')
+    deadline = ticks_add(ticks_ms(), DISPLAY_KEY_MS)
 
     while True:
         if not ticks_less(ticks_ms(), deadline):
@@ -227,7 +235,7 @@ def main():
             sequence = buttons[key_number][CONTROL]
             for item in sequence:
                 if callable(item):
-                    lights_on = item(macropad, lights_on)
+                    lights_on = item(macropad, neokey, lights_on)
                 elif isinstance(item, int):
                     if item >= 0:
                         macropad.keyboard.press(item)
